@@ -1,88 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>View Bill</title>
+  <meta charset="UTF-8" />
+  <title>Bill Checker</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 2rem;
-      max-width: 600px;
-      margin: auto;
-      text-align: center;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f2f2f2;
     }
-    input, button {
+
+    .window-bar {
+      background: #ddd;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .main {
+      display: flex;
+      padding: 30px;
+      gap: 30px;
+    }
+
+    .left {
+      flex: 1;
+      max-width: 300px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .left h2 {
+      margin-top: 0;
+    }
+
+    .left input {
+      width: 100%;
       padding: 10px;
-      margin-top: 10px;
+      margin-bottom: 15px;
       font-size: 16px;
-      width: 80%;
     }
-    #pdfViewer {
+
+    .captcha-box {
+      background: #eee;
+      font-weight: bold;
+      font-family: monospace;
+      letter-spacing: 2px;
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 10px;
+      user-select: none;
+    }
+
+    .left button {
+      width: 100%;
+      padding: 12px;
+      background: #333;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .right {
+      flex: 2;
+    }
+
+    iframe {
       width: 100%;
       height: 600px;
-      margin-top: 20px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
       display: none;
     }
-    #error {
+
+    .error {
       color: red;
+      margin-top: 10px;
+    }
+
+    .success {
+      color: green;
       margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h2>Enter Your Bill Key</h2>
-  <p id="bill-id-display"></p>
+  <div class="window-bar">Bill Checker</div>
 
-  <input type="text" id="keyInput" placeholder="Enter your key" />
-  <br>
-  <button onclick="submitKey()">Submit</button>
+  <div class="main">
+    <div class="left">
+      <h2>Enter Key</h2>
+      <input type="text" id="keyInput" placeholder="Your key..." />
 
-  <div id="error"></div>
+      <div class="captcha-box" id="captchaCode">AB12C</div>
+      <input type="text" id="captchaInput" placeholder="Type CAPTCHA" />
 
-  <iframe id="pdfViewer"></iframe>
+      <button onclick="submit()">Submit</button>
+
+      <div class="error" id="error"></div>
+      <div class="success" id="success"></div>
+    </div>
+
+    <div class="right">
+      <iframe id="pdfViewer"></iframe>
+    </div>
+  </div>
 
   <script>
-    let billData = null;
+    const captchaCode = "AB12C";
     const urlParams = new URLSearchParams(window.location.search);
-    const billId = urlParams.get('id');
+    const billId = urlParams.get("id");
+    let billData = null;
 
-    document.getElementById('bill-id-display').textContent = billId 
-      ? `Bill ID: ${billId}` 
-      : "No Bill ID found in URL.";
-
-    if (!billId) {
-      document.getElementById('error').textContent = "Missing 'id' parameter in URL.";
-    } else {
+    if (billId) {
       fetch(`../data/${billId}.json`)
-        .then(res => {
-          if (!res.ok) throw new Error("Bill not found.");
+        .then((res) => {
+          if (!res.ok) throw new Error("Not found");
           return res.json();
         })
-        .then(data => {
+        .then((data) => {
           billData = data;
         })
-        .catch(err => {
-          document.getElementById('error').textContent = "Bill data not found.";
+        .catch(() => {
+          document.getElementById("error").textContent = "Bill not found.";
         });
     }
 
-    function submitKey() {
-      const inputKey = document.getElementById('keyInput').value.trim();
+    function submit() {
+      const inputKey = document.getElementById("keyInput").value.trim();
+      const inputCaptcha = document.getElementById("captchaInput").value.trim();
+      const error = document.getElementById("error");
+      const success = document.getElementById("success");
+      const iframe = document.getElementById("pdfViewer");
+
+      error.textContent = "";
+      success.textContent = "";
+      iframe.style.display = "none";
 
       if (!billData) {
-        document.getElementById('error').textContent = "Cannot verify without bill data.";
+        error.textContent = "No bill data loaded.";
         return;
       }
 
-      if (inputKey === billData.key) {
-        document.getElementById('error').textContent = "";
-        const pdf = document.getElementById('pdfViewer');
-        pdf.src = billData.pdf_path;
-        pdf.style.display = "block";
-      } else {
-        document.getElementById('error').textContent = "Incorrect key. Please try again.";
+      if (inputCaptcha !== captchaCode) {
+        error.textContent = "Incorrect CAPTCHA.";
+        return;
       }
+
+      if (inputKey !== billData.key) {
+        error.textContent = "Incorrect key.";
+        return;
+      }
+
+      success.textContent = "Bill unlocked!";
+      iframe.src = billData.pdf_path;
+      iframe.style.display = "block";
     }
   </script>
 
