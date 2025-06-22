@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bill Checker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="window-bar">Bill Checker</div>
+
+  <div class="main">
+    <div class="left">
+      <h2>Enter Key</h2>
+      <input type="text" id="keyInput" placeholder="Your key..." />
+
+      <div class="captcha-box" id="captchaCode">AB12C</div>
+      <input type="text" id="captchaInput" placeholder="Type CAPTCHA" />
+
+      <button onclick="submit()">Submit</button>
+
+      <div class="error" id="error"></div>
+      <div class="success" id="success"></div>
+    </div>
+
+    <div class="right">
+      <iframe id="pdfViewer"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const captchaCode = "AB12C";
+    const urlParams = new URLSearchParams(window.location.search);
+    const billId = urlParams.get("id");
+    let billData = null;
+
+    if (billId) {
+      fetch(`../data/${billId}.json`)
+        .then(res => {
+          if (!res.ok) throw new Error("Not found");
+          return res.json();
+        })
+        .then(data => {
+          billData = data;
+        })
+        .catch(() => {
+          document.getElementById("error").textContent = "Bill not found.";
+        });
+    }
+
+    function submit() {
+      const inputKey = document.getElementById("keyInput").value.trim();
+      const inputCaptcha = document.getElementById("captchaInput").value.trim();
+      const error = document.getElementById("error");
+      const success = document.getElementById("success");
+      const iframe = document.getElementById("pdfViewer");
+
+      error.textContent = "";
+      success.textContent = "";
+      iframe.style.display = "none";
+
+      if (!billData) {
+        error.textContent = "No bill data loaded.";
+        return;
+      }
+
+      if (inputCaptcha !== captchaCode) {
+        error.textContent = "Incorrect CAPTCHA.";
+        return;
+      }
+
+      if (inputKey !== billData.key) {
+        error.textContent = "Incorrect key.";
+        return;
+      }
+
+      success.textContent = "Pay your bill!";
+      iframe.src = billData.pdf_path;
+      iframe.style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
